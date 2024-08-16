@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id             Int     @id @default(autoincrement())
+  username       String  @db.VarChar(45)
+  email          String  @db.VarChar(45)
+  password       String  @db.VarChar(200)
+  name           String  @db.VarChar(45)
+  coverPicture   String? @db.VarChar(300)
+  profilePicture String? @db.VarChar(300)
+  city           String? @db.VarChar(45)
+  website        String? @db.VarChar(45)
+
+  // Relations
+  posts     Posts[]
+  comments  Comments[]
+  likes     Likes[]
+  following Relationships[] @relation("Following")
+  followers Relationships[] @relation("Followers")
+  stories   Stories[]
+
+  @@unique([id])
+}
+
+model Posts {
+  id          Int      @id @default(autoincrement())
+  description String?  @db.VarChar(200)
+  img         String?  @db.VarChar(200)
+  userId      Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user     Users      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "userId")
+  comments Comments[]
+  likes    Likes[]
+
+  @@unique([id])
+  @@index([userId], name: "userId")
+}
+
+model Comments {
+  id          Int      @id @default(autoincrement())
+  description String   @db.VarChar(200)
+  createdAt   DateTime @default(now())
+  userId      Int
+  postId      Int
+
+  // Relations
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "commentUserId")
+  post Posts @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "postId")
+
+  @@unique([id])
+  @@index([userId], name: "commentUserId")
+  @@index([postId], name: "postId")
+}
+
+model Likes {
+  id     Int @id @default(autoincrement())
+  userId Int
+  postId Int
+
+  // Relations
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "likeUserId")
+  post Posts @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "likePostId")
+
+  @@unique([id])
+  @@index([userId], name: "likeUserId")
+  @@index([postId], name: "likePostId")
+}
+
+model Stories {
+  id     Int    @id @default(autoincrement())
+  img    String @db.VarChar(200)
+  userId Int
+
+  // Relations
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "storyUserId")
+
+  @@unique([id])
+  @@index([userId], name: "storyUserId")
+}
+
+model Relationships {
+  id             Int @id @default(autoincrement())
+  followerUserId Int
+  followedUserId Int
+
+  // Relations
+  followerUser Users @relation("Following", fields: [followerUserId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "followerUser")
+  followedUser Users @relation("Followers", fields: [followedUserId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "followedUser")
+
+  @@unique([id])
+  @@index([followerUserId], name: "followerUser")
+  @@index([followedUserId], name: "followedUser")
+}
