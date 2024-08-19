@@ -1,61 +1,119 @@
-import { db } from "../connect.js";
+import { PrismaClient } from '@prisma/client';
 import jwt from "jsonwebtoken";
 import moment from "moment";
 
-export const getStories = (req, res) => {
+const prisma = new PrismaClient();
+
+export const getStories = async (req, res) => {
 	const token = req.cookies.accessToken;
+
 	if (!token) return res.status(401).json("Not logged in!");
 
-	jwt.verify(token, "secretkey", (err, userInfo) => {
-		if (err) return res.status(403).json("Token is not valid!");
+	try {
+		const userInfo = jwt.verify(token, "secretkey");
 
 		console.log("server story userId:", userInfo.id);
 
-		const q = `SELECT s.*, name FROM stories AS s JOIN users AS u ON (u.id = s.userId)
-    LEFT JOIN relationships AS r ON (s.userId = r.followedUserId AND r.followerUserId= ?) LIMIT 4`;
-
-		db.query(q, [userInfo.id], (err, data) => {
-			if (err) return res.status(500).json(err);
-			return res.status(200).json(data);
+		// Fetch stories with user information
+		const stories = await prisma.stories.findMany({
+			where: {
+				userId: {
+					in: [
+						// Stories of followed users
+						...await prisma.relationships.findMany({
+							where: { followerUserId: userInfo.id },
+							select: { followedUserId: true }
+						}).then(relations => relations.map(rel => rel.followedUserId)),
+						userInfo.id // Include the current user's stories
+					]
+				}
+			},
+			include: {
+				user: {
+					select: {
+						name: true // Select only the name
+					}
+				}
+			},
+			take: 4 // Limit the number of stories
 		});
-	});
+
+		// Transform the stories to include user name at the root level
+		const transformedStories = stories.map(story => ({
+			id: story.id,
+			img: story.img,
+			name: story.user.name,
+			userId: story.userId
+		}));
+
+		return res.status(200).json(transformedStories);
+	} catch (err) {
+		if (err.name === 'JsonWebTokenError') {
+			return res.status(403).json("Token is not valid!");
+		}
+		return res.status(500).json(err.message);
+	}
 };
 
-export const addStory = (req, res) => {
+export const addStory = async (req, res) => {
 	const token = req.cookies.accessToken;
+
 	if (!token) return res.status(401).json("Not logged in!");
 
-	jwt.verify(token, "secretkey", (err, userInfo) => {
-		if (err) return res.status(403).json("Token is not valid!");
+	try {
+		const userInfo = jwt.verify(token, "secretkey");
 
-		const q = "INSERT INTO stories(`img`, `createdAt`, `userId`) VALUES (?)";
-		const values = [
-			req.body.img,
-			moment(Date.now()).format("YYYY-MM-DD HH:mm:ss"),
-			userInfo.id,
-		];
-
-		db.query(q, [values], (err, data) => {
-			if (err) return res.status(500).json(err);
-			return res.status(200).json("Story has been created.");
+		const newStory = await prisma.stories.create({
+			data: {
+				img: req.body.img,
+				createdAt: moment(Date.now()).toDate(),
+				userId: userInfo.id
+			}
 		});
-	});
+
+		return res.status(200).json({ message: "Story has been created.", story: newStory });
+	} catch (err) {
+		if (err.name === 'JsonWebTokenError') {
+			return res.status(403).json("Token is not valid!");
+		}
+		return res.status(500).json(err.message);
+	}
 };
 
-export const deleteStory = (req, res) => {
+export const deleteStory = async (req, res) => {
 	const token = req.cookies.accessToken;
+
 	if (!token) return res.status(401).json("Not logged in!");
 
-	jwt.verify(token, "secretkey", (err, userInfo) => {
-		if (err) return res.status(403).json("Token is not valid!");
+	try {
+		const userInfo = jwt.verify(token, "secretkey");
 
-		const q = "DELETE FROM stories WHERE `id`=? AND `userId` = ?";
+		// Find the story to ensure it exists and is owned by the user
+		const story = await prisma.stories.findUnique({
+			where: {
+				id: parseInt(req.params.id)
+			}
+		});
 
-		db.query(q, [req.params.id, userInfo.id], (err, data) => {
-			if (err) return res.status(500).json(err);
-			if (data.affectedRows > 0)
-				return res.status(200).json("Story has been deleted.");
+		if (!story) {
+			return res.status(404).json("Story not found.");
+		}
+
+		if (story.userId !== userInfo.id) {
 			return res.status(403).json("You can delete only your story!");
+		}
+
+		await prisma.stories.delete({
+			where: {
+				id: parseInt(req.params.id)
+			}
 		});
-	});
+
+		return res.status(200).json("Story has been deleted.");
+	} catch (err) {
+		if (err.name === 'JsonWebTokenError') {
+			return res.status(403).json("Token is not valid!");
+		}
+		return res.status(500).json(err.message);
+	}
 };

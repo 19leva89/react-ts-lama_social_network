@@ -1,48 +1,93 @@
-import { db } from "../connect.js";
+import { PrismaClient } from '@prisma/client';
 import jwt from "jsonwebtoken";
 
-export const getRelationships = (req, res) => {
-	const q = "SELECT followerUserId FROM relationships WHERE followedUserId = ?";
+const prisma = new PrismaClient();
 
-	db.query(q, [req.query.followedUserId], (err, data) => {
-		if (err) return res.status(500).json(err);
-		return res.status(200).json(data.map(relationship => relationship.followerUserId));
-	});
-}
+export const getRelationships = async (req, res) => {
+	const followedUserId = parseInt(req.query.followedUserId, 10);
+	if (isNaN(followedUserId)) {
+		return res.status(400).json("Invalid user ID");
+	}
 
-export const addRelationship = (req, res) => {
-	const token = req.cookies.accessToken;
-	if (!token) return res.status(401).json("Not logged in!");
-
-	jwt.verify(token, "secretkey", (err, userInfo) => {
-		if (err) return res.status(403).json("Token is not valid!");
-
-		const q = "INSERT INTO relationships (`followerUserId`,`followedUserId`) VALUES (?)";
-		const values = [
-			userInfo.id,
-			req.body.userId
-		];
-
-		db.query(q, [values], (err, data) => {
-			if (err) return res.status(500).json(err);
-			return res.status(200).json("Following");
+	try {
+		const relationships = await prisma.relationships.findMany({
+			where: {
+				followedUserId: followedUserId
+			},
+			select: {
+				followerUserId: true
+			}
 		});
-	});
+
+		// Extract and send the array of followerUserIds
+		const followerUserIds = relationships.map(relationship => relationship.followerUserId);
+
+		return res.status(200).json(followerUserIds);
+	} catch (err) {
+		return res.status(500).json(err.message);
+	}
 };
 
-export const deleteRelationship = (req, res) => {
-
+export const addRelationship = async (req, res) => {
 	const token = req.cookies.accessToken;
+
 	if (!token) return res.status(401).json("Not logged in!");
 
-	jwt.verify(token, "secretkey", (err, userInfo) => {
-		if (err) return res.status(403).json("Token is not valid!");
+	try {
+		const userInfo = jwt.verify(token, "secretkey");
 
-		const q = "DELETE FROM relationships WHERE `followerUserId` = ? AND `followedUserId` = ?";
+		const { userId } = req.body;
 
-		db.query(q, [userInfo.id, req.query.userId], (err, data) => {
-			if (err) return res.status(500).json(err);
-			return res.status(200).json("Unfollow");
+		// Ensure userId is valid
+		if (!userId) {
+			return res.status(400).json("Invalid user ID");
+		}
+
+		// Create new relationship
+		await prisma.relationships.create({
+			data: {
+				followerUserId: userInfo.id,
+				followedUserId: userId
+			}
 		});
-	});
+
+		return res.status(200).json("Following");
+	} catch (err) {
+		if (err.name === 'JsonWebTokenError') {
+			return res.status(403).json("Token is not valid!");
+		}
+		return res.status(500).json(err.message);
+	}
+};
+
+export const deleteRelationship = async (req, res) => {
+	const token = req.cookies.accessToken;
+
+	if (!token) return res.status(401).json("Not logged in!");
+
+	try {
+		const userInfo = jwt.verify(token, "secretkey");
+
+		const { userId } = req.query;
+
+		// Ensure userId is valid
+		if (!userId) {
+			return res.status(400).json("Invalid user ID");
+		}
+
+		// Delete relationship
+		await prisma.relationships.deleteMany({
+			where: {
+				followerUserId: userInfo.id,
+				followedUserId: parseInt(userId, 10),
+			}
+		});
+
+		return res.status(200).json("Unfollow");
+	} catch (err) {
+		if (err.name === 'JsonWebTokenError') {
+			return res.status(403).json("Token is not valid!");
+		}
+		return res.status(500).json(err.message);
+	}
 };

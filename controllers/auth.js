@@ -1,63 +1,78 @@
-import { db } from "../connect.js";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export const register = (req, res) => {
-	//CHECK USER IF EXISTS
+const prisma = new PrismaClient();
 
-	const q = "SELECT * FROM users WHERE username = ?";
+export const register = async (req, res) => {
+	try {
+		// CHECK IF USER EXISTS
+		const existingUser = await prisma.users.findFirst({
+			where: {
+				username: req.body.username,
+			},
+		});
 
-	db.query(q, [req.body.username], (err, data) => {
-		if (err) return res.status(500).json(err);
-		if (data.length) return res.status(409).json("User already exists!");
-		//CREATE A NEW USER
-		//Hash the password
+		if (existingUser) {
+			return res.status(409).json("User already exists!");
+		}
+
+		// Hash the password
 		const salt = bcrypt.genSaltSync(10);
 		const hashedPassword = bcrypt.hashSync(req.body.password, salt);
 
-		const q =
-			"INSERT INTO users (`username`,`email`,`password`,`name`) VALUE (?)";
-
-		const values = [
-			req.body.username,
-			req.body.email,
-			hashedPassword,
-			req.body.name,
-		];
-
-		db.query(q, [values], (err, data) => {
-			if (err) return res.status(500).json(err);
-			return res.status(200).json("User has been created.");
+		// CREATE A NEW USER
+		const newUser = await prisma.users.create({
+			data: {
+				username: req.body.username,
+				email: req.body.email,
+				password: hashedPassword,
+				name: req.body.name,
+			},
 		});
-	});
+
+		return res.status(200).json("User has been created.");
+	} catch (err) {
+		return res.status(500).json(err.message);
+	}
 };
 
-export const login = (req, res) => {
-	const q = "SELECT * FROM users WHERE username = ?";
+export const login = async (req, res) => {
+	try {
+		// Check if the user exists
+		const user = await prisma.users.findFirst({
+			where: {
+				username: req.body.username,
+			},
+		});
 
-	db.query(q, [req.body.username], (err, data) => {
-		if (err) return res.status(500).json(err);
-		if (data.length === 0) return res.status(404).json("User not found!");
+		if (!user) {
+			return res.status(404).json("User not found!");
+		}
 
-		const checkPassword = bcrypt.compareSync(
-			req.body.password,
-			data[0].password
-		);
+		// Password verification
+		const checkPassword = bcrypt.compareSync(req.body.password, user.password);
 
-		if (!checkPassword)
-			return res.status(400).json("Wrong password or user name!");
+		if (!checkPassword) {
+			return res.status(400).json("Wrong password or username!");
+		}
 
-		const token = jwt.sign({ id: data[0].id }, "secretkey");
+		// Token generation
+		const token = jwt.sign({ id: user.id }, "secretkey");
 
-		const { password, ...others } = data[0];
+		// Excluding the password from the response
+		const { password, ...others } = user;
 
+		// Setting the token in a cookie and returning user information
 		res
 			.cookie("accessToken", token, {
 				httpOnly: true,
 			})
 			.status(200)
 			.json(others);
-	});
+	} catch (err) {
+		return res.status(500).json(err.message);
+	}
 };
 
 export const logout = (req, res) => {
