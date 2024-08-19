@@ -1,18 +1,22 @@
 import { FC, useContext, useState, MouseEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import moment from "moment";
 import { makeRequest } from "../../axios";
 import { AuthContext, AuthContextType } from "../../context/authContext";
+
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { UserComment } from "../../types";
-import moment from "moment";
 
 type Props = {
   postId: number;
 };
 
 const Comments: FC<Props> = ({ postId }) => {
-  const [description, setDescription] = useState<string>("");
   const { currentUser } = useContext(AuthContext) as AuthContextType;
+  const [description, setDescription] = useState<string>("");
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
 
   const { isLoading, error, data } = useQuery<UserComment[]>({
     queryKey: ["comments", postId],
@@ -31,10 +35,28 @@ const Comments: FC<Props> = ({ postId }) => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (commentId: number) => {
+      return makeRequest.delete("/comments/" + commentId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["comments"] });
+    },
+  });
+
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     mutation.mutate({ description, postId });
     setDescription("");
+  };
+
+  const handleDelete = (commentId: number) => {
+    deleteMutation.mutate(commentId);
+  };
+
+  const handleMenuToggle = (commentId: number) => {
+    setMenuOpenId((prevMenuOpenId) => (prevMenuOpenId === commentId ? null : commentId));
   };
 
   return (
@@ -61,6 +83,18 @@ const Comments: FC<Props> = ({ postId }) => {
                 <p>{comment.description}</p>
               </div>
               <span className="comment__date">{moment(comment.createdAt).fromNow()}</span>
+
+              {comment.userId === currentUser?.id && (
+                <>
+                  <MoreHorizIcon onClick={() => handleMenuToggle(comment.id)} />
+                  {menuOpenId === comment.id && (
+                    <DeleteForeverIcon
+                      onClick={() => handleDelete(comment.id)}
+                      style={{ cursor: "pointer", color: "#f0544f" }}
+                    />
+                  )}
+                </>
+              )}
             </div>
           ))}
     </div>

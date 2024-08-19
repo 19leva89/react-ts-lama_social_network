@@ -10,6 +10,7 @@ import Comments from "../comments";
 
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import TextsmsOutlinedIcon from "@mui/icons-material/TextsmsOutlined";
 import FavoriteOutlinedIcon from "@mui/icons-material/FavoriteOutlined";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
@@ -85,10 +86,15 @@ const Post: FC<Props> = ({ post }) => {
             </div>
           </div>
 
-          <MoreHorizIcon onClick={() => setMenuOpen(!menuOpen)} />
-          {menuOpen && post.userId === currentUser?.id && (
-            <button onClick={handleDelete}>delete</button>
-          )}
+          <div className="post__user--info">
+            <MoreHorizIcon onClick={() => setMenuOpen(!menuOpen)} />
+            {menuOpen && post.userId === currentUser?.id && (
+              <DeleteForeverIcon
+                onClick={handleDelete}
+                style={{ cursor: "pointer", color: "#f0544f" }}
+              />
+            )}
+          </div>
         </div>
 
         <div className="post__content">

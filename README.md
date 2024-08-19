@@ -11,8 +11,7 @@ This project contains the following technologies:
 
 Server:
 - Express 4
-- Prisma 5 (ORM for DB)
-- MySQL2 (relational database)
+- Prisma 5 (ORM for MySQL DB)
 - Bcrypt (password hashing)
 - JSON Web Token (securely transmitting information)
 - CORS (cross-origin resource sharing)
