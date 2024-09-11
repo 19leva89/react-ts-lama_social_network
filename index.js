@@ -37,16 +37,6 @@ app.use(
 // Connecting cookie-parser
 app.use(cookieParser());
 
-// Setting cookies
-app.get('/set-cookie', (req, res) => {
-	res.cookie('token', 'your-token-value', {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: 'None',
-	});
-	res.send('Cookie has been set');
-});
-
 // Multer upload
 app.post("/api/upload", upload.single("file"), (req, res) => {
 	if (!req.file) {
