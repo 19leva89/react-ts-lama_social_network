@@ -18,7 +18,7 @@ const generateFilename = (originalName) => {
 // Настройка хранилища для multer
 const storage = multer.diskStorage({
 	destination: function (req, file, cb) {
-		const uploadPath = path.join(__dirname, 'client', 'build', 'upload');
+		const uploadPath = path.join(__dirname, 'client', 'public', 'upload');
 
 		// Проверка существования директории, создание если не существует
 		if (!fs.existsSync(uploadPath)) {
@@ -27,6 +27,7 @@ const storage = multer.diskStorage({
 
 		cb(null, uploadPath);
 	},
+
 	filename: function (req, file, cb) {
 		const uniqueFilename = generateFilename(file.originalname);
 		cb(null, uniqueFilename);
@@ -36,6 +37,7 @@ const storage = multer.diskStorage({
 // Фильтрация файлов по MIME типу (опционально)
 const fileFilter = (req, file, cb) => {
 	const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']; // Разрешенные MIME типы
+
 	if (allowedTypes.includes(file.mimetype)) {
 		cb(null, true); // Разрешаем загрузку файла
 	} else {
