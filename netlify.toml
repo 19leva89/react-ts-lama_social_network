@@ -1,0 +1,6 @@
+[build]
+  command = "cd client && npm install && NODE_ENV=production && CI=false npm run build"
+  publish = "client/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
