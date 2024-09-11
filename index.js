@@ -22,7 +22,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(
 	cors({
-		origin: "http://localhost:3000" || "https://react-ts-lama-social-network.netlify.app",
+		origin:
+			process.env.NODE_ENV === "production"
+				? "https://react-ts-lama-social-network.netlify.app"
+				: "http://localhost:3000",
 	})
 );
 app.use(cookieParser());
