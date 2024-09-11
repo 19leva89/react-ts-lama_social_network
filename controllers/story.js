@@ -12,7 +12,7 @@ export const getStories = async (req, res) => {
 	try {
 		const userInfo = jwt.verify(token, "secretkey");
 
-		console.log("server story userId:", userInfo.id);
+		// console.log("server story userId:", userInfo.id);
 
 		// Fetch stories with user information
 		const stories = await prisma.stories.findMany({

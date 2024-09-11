@@ -14,23 +14,40 @@ import upload from "./upload.js";
 
 const app = express();
 
-// middlewares
+// Allowing Credentials for Cross-Domain Requests
 app.use((req, res, next) => {
 	res.header("Access-Control-Allow-Credentials", true);
 	next();
 });
+
+// Using JSON parsing
 app.use(express.json());
+
+// Setting up CORS to work with cookies
 app.use(
 	cors({
 		origin:
 			process.env.NODE_ENV === "production"
 				? "https://react-ts-lama-social-network.netlify.app"
 				: "http://localhost:3000",
+		credentials: true,
 	})
 );
+
+// Connecting cookie-parser
 app.use(cookieParser());
 
-// multer upload
+// Setting cookies
+app.get('/set-cookie', (req, res) => {
+	res.cookie('token', 'your-token-value', {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === "production",
+		sameSite: 'None',
+	});
+	res.send('Cookie has been set');
+});
+
+// Multer upload
 app.post("/api/upload", upload.single("file"), (req, res) => {
 	if (!req.file) {
 		return res.status(400).json({ error: "No file uploaded" });
@@ -39,7 +56,7 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
 	res.status(200).json(file.filename);
 });
 
-// routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
@@ -48,7 +65,7 @@ app.use("/api/likes", likeRoutes);
 app.use("/api/relationships", relationshipRoutes);
 app.use("/api/stories", storyRoutes);
 
-// server port
+// Server port
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
 	console.log(`API working on port ${PORT}!`);
