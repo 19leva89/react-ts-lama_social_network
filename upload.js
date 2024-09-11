@@ -18,7 +18,7 @@ const generateFilename = (originalName) => {
 // Настройка хранилища для multer
 const storage = multer.diskStorage({
 	destination: function (req, file, cb) {
-		const uploadPath = path.join(__dirname, 'client', 'public', 'upload');
+		const uploadPath = path.join(__dirname, 'upload');
 
 		// Проверка существования директории, создание если не существует
 		if (!fs.existsSync(uploadPath)) {

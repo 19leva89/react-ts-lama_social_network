@@ -39,11 +39,15 @@ app.use(cookieParser());
 
 // Multer upload
 app.post("/api/upload", upload.single("file"), (req, res) => {
-	if (!req.file) {
-		return res.status(400).json({ error: "No file uploaded" });
+	try {
+		res.status(200).json({
+			error: "File uploaded successfully",
+			filename: req.file.filename,
+		});
+
+	} catch (err) {
+		res.status(400).json({ error: "No file uploaded" });
 	}
-	const file = req.file;
-	res.status(200).json(file.filename);
 });
 
 // Routes
