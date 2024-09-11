@@ -1,5 +1,8 @@
 import { createContext, useEffect, useState, ReactNode } from "react";
+
 import axios from "axios";
+import { BASE_URL } from "../axios";
+
 import { User } from "../types";
 
 interface LoginInputs {
@@ -24,7 +27,7 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
   );
 
   const login = async (inputs: LoginInputs) => {
-    const res = await axios.post<User>("http://localhost:4000/api/auth/login", inputs, {
+    const res = await axios.post<User>(`${BASE_URL}/auth/login`, inputs, {
       withCredentials: true,
     });
 

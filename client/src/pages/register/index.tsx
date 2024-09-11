@@ -1,6 +1,8 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
+
 import axios from "axios";
+import { BASE_URL } from "../../axios";
 
 const Register = () => {
   const [inputs, setInputs] = useState({
@@ -20,7 +22,7 @@ const Register = () => {
     e.preventDefault();
 
     try {
-      await axios.post("http://localhost:4000/api/auth/register", inputs);
+      await axios.post(`${BASE_URL}/auth/register`, inputs);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setErr(err.response?.data);
