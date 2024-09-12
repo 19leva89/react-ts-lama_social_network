@@ -1,7 +1,6 @@
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext, AuthContextType } from "../../context/authContext";
-import { BASE_URL } from "../../axios";
 
 import Friends from "../../assets/1.png";
 import Groups from "../../assets/2.png";
@@ -29,7 +28,7 @@ const LeftBar = () => {
             style={{ textDecoration: "none", color: "inherit" }}
           >
             <div className="menu__user">
-              <img src={`${BASE_URL}/upload/` + currentUser?.profilePicture} alt="" />
+              <img src={`/upload/` + currentUser?.profilePicture} alt="" />
 
               <span>{currentUser?.name}</span>
             </div>

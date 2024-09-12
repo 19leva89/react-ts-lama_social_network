@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://react-ts-lama-social-network-server.onrender.com/api"
+    ? "https://react-ts-lama-social-network.onrender.com/api"
     : "http://localhost:4000/api";
 
 export const makeRequest = axios.create({

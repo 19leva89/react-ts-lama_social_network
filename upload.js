@@ -1,31 +1,42 @@
-import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import multer from "multer";
 import crypto from "crypto";
 import path, { dirname } from "path";
 import { fileURLToPath } from 'url';
 
-// Получаем __dirname для ES6 модулей
+// Get __dirname for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Функция для генерации уникального имени файла
+// Function to generate a unique file name
 const generateFilename = (originalName) => {
-	const fileExtension = path.extname(originalName); // Получаем расширение файла
-	const uniqueSuffix = crypto.randomBytes(2).toString('hex'); // Генерация уникального суффикса
+	const fileExtension = path.extname(originalName); // Get the file extension
+	const uniqueSuffix = crypto.randomBytes(4).toString('hex'); // Generate a unique suffix
 	return `${Date.now()}-${uniqueSuffix}${fileExtension}`;
 };
 
-// Настройка хранилища для multer
+// Configuration: MIME types and file size limit
+const ALLOWED_TYPES = process.env.ALLOWED_TYPES?.split(',') || ['image/jpeg', 'image/png', 'image/gif'];
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5MB
+
+// Setting up storage for multer
 const storage = multer.diskStorage({
-	destination: function (req, file, cb) {
-		const uploadPath = path.join(__dirname, 'client', 'public', 'upload');
+	destination: async function (req, file, cb) {
+		try {
+			const uploadPath = path.join(__dirname, 'client', 'public', 'upload');
 
-		// Проверка существования директории, создание если не существует
-		if (!fs.existsSync(uploadPath)) {
-			fs.mkdirSync(uploadPath, { recursive: true });
+			// Check for directory existence, create if it doesn't exist
+			try {
+				await fsPromises.access(uploadPath);
+			} catch (error) {
+				await fsPromises.mkdir(uploadPath, { recursive: true });
+			}
+
+			cb(null, uploadPath);
+		} catch (error) {
+			console.error(`Error while setting upload destination: ${error.message}`);
+			cb(error);
 		}
-
-		cb(null, uploadPath);
 	},
 
 	filename: function (req, file, cb) {
@@ -34,22 +45,21 @@ const storage = multer.diskStorage({
 	},
 });
 
-// Фильтрация файлов по MIME типу (опционально)
+// Filter files by MIME type (optional)
 const fileFilter = (req, file, cb) => {
-	const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']; // Разрешенные MIME типы
-
-	if (allowedTypes.includes(file.mimetype)) {
-		cb(null, true); // Разрешаем загрузку файла
+	if (ALLOWED_TYPES.includes(file.mimetype)) {
+		cb(null, true); // Allow file upload
 	} else {
-		cb(new Error('Недопустимый тип файла. Разрешены только изображения.'), false); // Отклоняем файл
+		console.error(`File upload error: Invalid MIME type ${file.mimetype}`);
+		cb(new Error('Invalid file type. Only images are allowed.'), false); // Reject the file
 	}
 };
 
-// Создание экземпляра загрузчика multer
+// Create an instance of the multer loader
 const upload = multer({
 	storage: storage,
-	fileFilter: fileFilter, // Опциональная фильтрация по MIME типу
-	limits: { fileSize: 5 * 1024 * 1024 }, // Ограничение размера файла до 5MB (опционально)
+	fileFilter: fileFilter, // Optional filtering by MIME type
+	limits: { fileSize: MAX_FILE_SIZE }, // Limit file size to 5MB (optional)
 });
 
 export default upload;
